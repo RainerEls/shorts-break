@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Shorts Break",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Counts down while you watch YouTube Shorts, then locks them until you solve a sudoku, a math sprint and a memory game.",
   "icons": {
     "48": "icons/icon.svg",

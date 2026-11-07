@@ -9,12 +9,16 @@
     );
 
   // Whole seconds of each Short already watched, so loops and rewinds don't count again.
+  // Kept for the most recent Shorts only; Map order doubles as least-recently-used order.
+  const HISTORY = 3;
   const watched = new Map();
   let last = null;
 
   function isFirstViewing(id, t) {
-    if (!watched.has(id)) watched.set(id, new Set());
-    const seen = watched.get(id);
+    const seen = watched.get(id) || new Set();
+    watched.delete(id);
+    watched.set(id, seen);
+    if (watched.size > HISTORY) watched.delete(watched.keys().next().value);
     const sec = Math.floor(t);
     const fresh = !seen.has(sec);
     // Mark every second since the previous sample, so timer jitter leaves no gaps a replay could hit.
