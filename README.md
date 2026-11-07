@@ -14,3 +14,7 @@ Firefox extension: a timer counts down while you watch YouTube Shorts. When it r
 Temporary (until Firefox restarts): `about:debugging#/runtime/this-firefox` → **Load Temporary Add-on…** → pick `manifest.json`.
 
 Permanent: release Firefox only installs signed add-ons. Either sign it as an unlisted add-on on addons.mozilla.org (free, automatic, `web-ext sign --channel unlisted`), or use Firefox Developer Edition/Nightly with `xpinstall.signatures.required` set to `false` in `about:config` and install the zip (`web-ext build`) from `about:addons` → gear → **Install Add-on From File…**.
+
+## Releases
+
+Every push to `main` cuts a release through the shared `auto-release` workflow: conventional commits decide the version (`fix:` → patch, `feat:` → minor, `!` → major). The release gets `shorts-break-<version>.zip` with `manifest.json` at its root, ready to upload to addons.mozilla.org. The version in the repo's `manifest.json` stays `0.0.0`; the workflow stamps the release version into the zip.
