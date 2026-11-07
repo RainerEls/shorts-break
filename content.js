@@ -3,10 +3,26 @@
 
   const onShorts = () => location.pathname.startsWith("/shorts");
 
-  const isPlaying = () =>
-    [...document.querySelectorAll("video")].some(
+  const playingVideo = () =>
+    [...document.querySelectorAll("video")].find(
       (v) => !v.paused && !v.ended && v.readyState > 2
     );
+
+  // Whole seconds of each Short already watched, so loops and rewinds don't count again.
+  const watched = new Map();
+  let last = null;
+
+  function isFirstViewing(id, t) {
+    if (!watched.has(id)) watched.set(id, new Set());
+    const seen = watched.get(id);
+    const sec = Math.floor(t);
+    const fresh = !seen.has(sec);
+    // Mark every second since the previous sample, so timer jitter leaves no gaps a replay could hit.
+    const continuous = last && last.id === id && t > last.t && t - last.t < 3;
+    for (let s = continuous ? Math.floor(last.t) : sec; s <= sec; s++) seen.add(s);
+    last = { id, t };
+    return fresh;
+  }
 
   function showPill(text, warn) {
     if (!pill) {
@@ -25,10 +41,12 @@
 
   async function tick() {
     if (!onShorts()) return hidePill();
-    const playing = document.visibilityState === "visible" && isPlaying();
+    const video = document.visibilityState === "visible" && playingVideo();
+    const id = location.pathname.split("/")[2] || "";
+    const counting = !!video && isFirstViewing(id, video.currentTime);
     let status;
     try {
-      status = await browser.runtime.sendMessage({ type: "tick", playing });
+      status = await browser.runtime.sendMessage({ type: "tick", playing: counting });
     } catch {
       return;
     }
@@ -36,7 +54,8 @@
       document.querySelectorAll("video").forEach((v) => v.pause());
       return;
     }
-    const label = `⏱ ${formatTime(status.remaining)}${playing ? "" : " · paused"}`;
+    const note = counting ? "" : video ? " · rewatch, not counting" : " · paused";
+    const label = `⏱ ${formatTime(status.remaining)}${note}`;
     showPill(label, status.remaining <= 60);
   }
 

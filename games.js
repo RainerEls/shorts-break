@@ -103,10 +103,43 @@ async function startSudoku() {
 function setCell(i, value) {
   if (sudoku.puzzle[i]) return;
   sudoku.entries[i] = value;
-  $("sudoku-grid").children[i].value = value || "";
+  const cell = $("sudoku-grid").children[i];
+  cell.value = value || "";
+  cell.classList.remove("wrong");
   saveSudoku();
   refreshSudoku();
+  highlightSame(value);
 }
+
+function highlightSame(value) {
+  for (const cell of $("sudoku-grid").children) {
+    cell.classList.toggle("same", !!value && cell.value === String(value));
+  }
+}
+
+function focusedValue() {
+  const cell = document.activeElement;
+  return cell && cell.parentElement === $("sudoku-grid") ? cell.value : "";
+}
+
+$("sudoku-grid").addEventListener("mouseover", (e) => {
+  if (e.target.tagName === "INPUT") highlightSame(e.target.value);
+});
+$("sudoku-grid").addEventListener("mouseleave", () => highlightSame(focusedValue()));
+$("sudoku-grid").addEventListener("focusin", (e) => highlightSame(e.target.value));
+
+$("sudoku-check").addEventListener("click", () => {
+  if (!sudoku) return;
+  let wrong = 0;
+  [...$("sudoku-grid").children].forEach((cell, i) => {
+    const bad = !sudoku.puzzle[i] && sudoku.entries[i] && sudoku.entries[i] !== sudoku.solution[i];
+    cell.classList.toggle("wrong", !!bad);
+    if (bad) wrong++;
+  });
+  const msg = $("sudoku-msg");
+  msg.textContent = wrong ? `${wrong} wrong ${wrong === 1 ? "entry" : "entries"} marked.` : "Everything so far is right.";
+  msg.className = wrong ? "msg bad" : "msg good";
+});
 
 function refreshSudoku() {
   const bad = Sudoku.conflicts(sudoku.entries);

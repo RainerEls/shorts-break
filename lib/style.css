@@ -12,6 +12,7 @@
   --given: #1b1e27;
   --entry: #2357d9;
   --highlight: #dfe7fb;
+  --same: #c3d3fa;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -29,6 +30,7 @@
     --given: #eceef4;
     --entry: #8cb0ff;
     --highlight: #2b3550;
+    --same: #34467a;
   }
 }
 
