@@ -16,7 +16,7 @@ jobs:
           node-version: "24"
 
       - name: Lint extension
-        run: npx --yes web-ext@10.8.0 lint --source-dir . --ignore-files README.md ".gitea/**" "docs/**"
+        run: npx --yes web-ext@10.8.0 lint --source-dir . --ignore-files README.md ".gitea/**" docs "docs/**"
 
   release:
     needs: lint
@@ -49,7 +49,7 @@ jobs:
           '
 
       - name: Build zip
-        run: npx --yes web-ext@10.8.0 build --source-dir . --artifacts-dir dist --filename "shorts-break-{version}.zip" --ignore-files README.md ".gitea/**" "docs/**"
+        run: npx --yes web-ext@10.8.0 build --source-dir . --artifacts-dir dist --filename "shorts-break-{version}.zip" --ignore-files README.md ".gitea/**" docs "docs/**"
 
       - name: Attach zip to release
         uses: softprops/action-gh-release@v3
