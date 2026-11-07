@@ -1,0 +1,162 @@
+main {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 32px 16px 48px;
+}
+
+header {
+  margin-bottom: 24px;
+}
+
+#steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+#steps button.active {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+#steps button.solved .check {
+  color: var(--good);
+}
+
+.msg {
+  min-height: 1.5em;
+  font-weight: 600;
+}
+
+.msg.good { color: var(--good); }
+.msg.bad { color: var(--bad); }
+
+/* Sudoku */
+.sudoku {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  width: min(100%, 450px);
+  aspect-ratio: 1;
+  border: 2px solid var(--text);
+  background: var(--surface);
+}
+
+.sudoku input {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+  text-align: center;
+  font-size: clamp(16px, 5vw, 24px);
+  color: var(--entry);
+  caret-color: transparent;
+}
+
+.sudoku input:focus {
+  outline: none;
+  background: var(--highlight);
+}
+
+.sudoku input.given {
+  color: var(--given);
+  font-weight: 700;
+}
+
+.sudoku input.conflict {
+  color: var(--bad);
+  background: color-mix(in srgb, var(--bad) 14%, transparent);
+}
+
+.sudoku input.col-3 { border-right: 2px solid var(--text); }
+.sudoku input.row-3 { border-bottom: 2px solid var(--text); }
+
+/* Math */
+.math-progress {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--surface-2);
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+#math-bar {
+  height: 100%;
+  width: 0;
+  background: var(--good);
+  transition: width 0.2s;
+}
+
+#math-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.math-question {
+  font-size: 32px;
+  font-weight: 700;
+  min-width: 7ch;
+}
+
+#math-answer {
+  width: 8ch;
+  font-size: 24px;
+}
+
+.shake {
+  animation: shake 0.3s;
+}
+
+@keyframes shake {
+  25% { transform: translateX(-6px); }
+  75% { transform: translateX(6px); }
+}
+
+/* Memory */
+.memory {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  width: min(100%, 400px);
+}
+
+.memory button {
+  aspect-ratio: 1;
+  padding: 0;
+  font-size: clamp(24px, 8vw, 40px);
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+
+.memory button.hidden-face {
+  color: transparent;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.memory button.matched {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* Done */
+.done {
+  text-align: center;
+  padding: 32px 0;
+}
+
+.button-link {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-weight: 600;
+  text-decoration: none;
+}

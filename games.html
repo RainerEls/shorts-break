@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Shorts Locked</title>
+  <link rel="icon" href="icons/icon.svg">
+  <link rel="stylesheet" href="lib/style.css">
+  <link rel="stylesheet" href="games.css">
+</head>
+<body>
+  <main>
+    <header>
+      <h1 id="headline">Shorts are locked</h1>
+      <p id="subline" class="muted">Solve all three to get your Shorts time back.</p>
+      <nav id="steps" aria-label="Puzzles">
+        <button data-game="sudoku"><span class="check">○</span> Sudoku</button>
+        <button data-game="math"><span class="check">○</span> Math sprint</button>
+        <button data-game="memory"><span class="check">○</span> Memory pairs</button>
+      </nav>
+    </header>
+
+    <section id="game-sudoku" class="game" hidden>
+      <p class="muted">Fill every row, column and 3×3 box with 1–9. Arrow keys move, Backspace clears.</p>
+      <div id="sudoku-grid" class="sudoku"></div>
+      <p id="sudoku-msg" class="msg" aria-live="polite"></p>
+    </section>
+
+    <section id="game-math" class="game" hidden>
+      <p class="muted">Answer <span id="math-goal"></span> problems correctly. A wrong answer costs you one.</p>
+      <div class="math-progress"><div id="math-bar"></div></div>
+      <form id="math-form" autocomplete="off">
+        <div id="math-question" class="math-question tabular"></div>
+        <input id="math-answer" type="text" inputmode="numeric" class="tabular" aria-label="Answer">
+        <button class="primary" type="submit">Check</button>
+      </form>
+      <p id="math-msg" class="msg" aria-live="polite"></p>
+    </section>
+
+    <section id="game-memory" class="game" hidden>
+      <p class="muted">Flip two cards at a time and find all eight pairs.</p>
+      <div id="memory-grid" class="memory"></div>
+      <p id="memory-msg" class="msg" aria-live="polite"></p>
+    </section>
+
+    <section id="done" class="game done" hidden>
+      <h2>Unlocked</h2>
+      <p>Your Shorts timer is full again: <strong id="done-time"></strong>.</p>
+      <a id="back-link" class="button-link" href="https://www.youtube.com/shorts">Back to Shorts</a>
+    </section>
+  </main>
+  <script src="lib/common.js"></script>
+  <script src="lib/sudoku.js"></script>
+  <script src="games.js"></script>
+</body>
+</html>

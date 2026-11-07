@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Shorts Break</title>
+  <link rel="stylesheet" href="lib/style.css">
+  <style>
+    body { width: 260px; padding: 16px; }
+    .time { font-size: 40px; font-weight: 700; margin: 4px 0; }
+    .locked .time { color: var(--accent); }
+    .bar { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; margin-bottom: 14px; }
+    .bar div { height: 100%; background: var(--good); }
+    .actions { display: flex; gap: 8px; }
+    .actions button { flex: 1; }
+  </style>
+</head>
+<body>
+  <div class="muted" id="label">Shorts time left</div>
+  <div class="time tabular" id="time">–</div>
+  <div class="bar"><div id="bar"></div></div>
+  <div class="actions">
+    <button class="primary" id="puzzles" hidden>Unlock</button>
+    <button id="settings">Settings</button>
+  </div>
+  <script src="lib/common.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

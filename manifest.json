@@ -1,0 +1,42 @@
+{
+  "manifest_version": 2,
+  "name": "Shorts Break",
+  "version": "1.0.0",
+  "description": "Counts down while you watch YouTube Shorts, then locks them until you solve a sudoku, a math sprint and a memory game.",
+  "icons": {
+    "48": "icons/icon.svg",
+    "96": "icons/icon.svg"
+  },
+  "permissions": [
+    "storage",
+    "tabs",
+    "*://*.youtube.com/*"
+  ],
+  "background": {
+    "scripts": ["lib/common.js", "background.js"],
+    "persistent": true
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*.youtube.com/*"],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "browser_action": {
+    "default_title": "Shorts Break",
+    "default_icon": "icons/icon.svg",
+    "default_popup": "popup.html"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": false
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "shorts-break@local",
+      "strict_min_version": "109.0"
+    }
+  }
+}
