@@ -66,9 +66,25 @@ header {
   font-weight: 700;
 }
 
-.sudoku input.conflict {
+.sudoku input.same {
+  background: var(--same);
+}
+
+.sudoku input.conflict,
+.sudoku input.wrong {
   color: var(--bad);
   background: color-mix(in srgb, var(--bad) 14%, transparent);
+}
+
+.sudoku-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 12px;
+}
+
+.sudoku-actions .msg {
+  margin: 0;
 }
 
 .sudoku input.col-3 { border-right: 2px solid var(--text); }

@@ -23,7 +23,10 @@
     <section id="game-sudoku" class="game" hidden>
       <p class="muted">Fill every row, column and 3×3 box with 1–9. Arrow keys move, Backspace clears.</p>
       <div id="sudoku-grid" class="sudoku"></div>
-      <p id="sudoku-msg" class="msg" aria-live="polite"></p>
+      <div class="sudoku-actions">
+        <button id="sudoku-check" type="button">Check</button>
+        <p id="sudoku-msg" class="msg" aria-live="polite"></p>
+      </div>
     </section>
 
     <section id="game-math" class="game" hidden>
