@@ -13,7 +13,7 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: "24"
+          node-version: "26"
 
       - name: Lint extension
         run: npx --yes web-ext@10.8.0 lint --source-dir . --ignore-files README.md ".gitea/**" docs "docs/**"
@@ -35,7 +35,7 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: "24"
+          node-version: "26"
 
       - name: Stamp version from tag
         env:
