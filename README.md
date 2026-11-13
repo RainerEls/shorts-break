@@ -20,7 +20,7 @@ Available on [addons.mozilla.org](https://addons.mozilla.org/firefox/addon/short
 
 ## Puzzles
 
-Sudoku: a new puzzle every time, always with exactly one solution. Clashing numbers turn red as you type, and hovering over or selecting a cell highlights the same number elsewhere. **Check** marks wrong entries in red without removing them.
+Sudoku: a new puzzle every time, always with exactly one solution. Pick a number on the pad below the grid and tap squares to place it, or select a square and type. The picked number is highlighted across the board, notes included. **Notes** (or the N key) switches to small pencil marks, and **Fill all notes** puts 1–9 in every empty square for you to whittle down; placing a number removes it from the notes in its row, column and box. Clashing numbers turn red as you type, and **Check** marks wrong entries in red without removing them.
 
 <img src="docs/screenshots/sudoku.png" width="380" alt="Sudoku with every 5 highlighted and two wrong entries marked red">
 

@@ -65,11 +65,21 @@ button {
   padding: 8px 14px;
 }
 
+/* :where keeps this weaker than any state a page styles itself. */
+button:where(:not(.primary):not(:disabled)):hover {
+  border-color: var(--muted);
+  background: var(--highlight);
+}
+
 button.primary {
   background: var(--accent);
   border-color: var(--accent);
   color: var(--accent-text);
   font-weight: 600;
+}
+
+button.primary:where(:not(:disabled)):hover {
+  filter: brightness(1.1);
 }
 
 button:disabled {

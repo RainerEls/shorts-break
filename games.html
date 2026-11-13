@@ -21,12 +21,26 @@
     </header>
 
     <section id="game-sudoku" class="game" hidden>
-      <p class="muted">Fill every row, column and 3×3 box with 1–9. Arrow keys move, Backspace clears.</p>
+      <p class="muted">Fill every row, column and 3×3 box with 1–9. Pick a number, then tap squares to place it, or type on your keyboard.</p>
       <div id="sudoku-grid" class="sudoku"></div>
-      <div class="sudoku-actions">
-        <button id="sudoku-check" type="button">Check</button>
-        <p id="sudoku-msg" class="msg" aria-live="polite"></p>
+      <div id="sudoku-pad" class="sudoku-pad" role="group" aria-label="Numbers">
+        <button type="button" data-digit="1" aria-pressed="false">1</button>
+        <button type="button" data-digit="2" aria-pressed="false">2</button>
+        <button type="button" data-digit="3" aria-pressed="false">3</button>
+        <button type="button" data-digit="4" aria-pressed="false">4</button>
+        <button type="button" data-digit="5" aria-pressed="false">5</button>
+        <button type="button" data-digit="6" aria-pressed="false">6</button>
+        <button type="button" data-digit="7" aria-pressed="false">7</button>
+        <button type="button" data-digit="8" aria-pressed="false">8</button>
+        <button type="button" data-digit="9" aria-pressed="false">9</button>
+        <button type="button" data-tool="erase" aria-pressed="false" aria-label="Erase">⌫</button>
       </div>
+      <div class="sudoku-actions">
+        <button id="sudoku-notes" type="button" aria-pressed="false" title="Notes (N)">✎ Notes</button>
+        <button id="sudoku-fill-notes" type="button">Fill all notes</button>
+        <button id="sudoku-check" type="button">Check</button>
+      </div>
+      <p id="sudoku-msg" class="msg" aria-live="polite"></p>
     </section>
 
     <section id="game-math" class="game" hidden>

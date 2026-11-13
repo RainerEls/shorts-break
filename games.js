@@ -55,14 +55,21 @@ $("steps").addEventListener("click", (e) => {
 
 /* ---------- Sudoku ---------- */
 
+const ALL_NOTES = 0x3fe; // bits 1..9
 let sudoku = null;
+let cellEls = [];
+// The digit picked on the pad (1-9), "erase", or null.
+let tool = null;
+let notesMode = false;
 
 async function loadSudoku() {
   const { puzzles = {} } = await browser.storage.local.get("puzzles");
   const difficulty = status.settings.sudokuDifficulty;
-  if (puzzles.sudoku && puzzles.sudoku.difficulty === difficulty) return puzzles.sudoku;
+  if (puzzles.sudoku && puzzles.sudoku.difficulty === difficulty) {
+    return { notes: new Array(81).fill(0), ...puzzles.sudoku };
+  }
   const { puzzle, solution } = Sudoku.generate(SUDOKU_CLUES[difficulty] || SUDOKU_CLUES.medium);
-  const fresh = { difficulty, puzzle, solution, entries: puzzle.slice() };
+  const fresh = { difficulty, puzzle, solution, entries: puzzle.slice(), notes: new Array(81).fill(0) };
   await browser.storage.local.set({ puzzles: { ...puzzles, sudoku: fresh } });
   return fresh;
 }
@@ -80,14 +87,17 @@ async function startSudoku() {
   $("sudoku-msg").textContent = "";
   const grid = $("sudoku-grid");
   grid.replaceChildren();
-  sudoku.puzzle.forEach((given, i) => {
+  cellEls = sudoku.puzzle.map((given, i) => {
+    const box = document.createElement("div");
+    box.className = "cell";
+    if (i % 9 === 2 || i % 9 === 5) box.classList.add("col-3");
+    if (Math.floor(i / 9) === 2 || Math.floor(i / 9) === 5) box.classList.add("row-3");
     const cell = document.createElement("input");
     cell.dataset.i = i;
     cell.maxLength = 1;
-    cell.inputMode = "numeric";
+    // The number pad replaces the on-screen keyboard; a real keyboard still works.
+    cell.inputMode = "none";
     cell.setAttribute("aria-label", `Row ${Math.floor(i / 9) + 1}, column ${(i % 9) + 1}`);
-    if (i % 9 === 2 || i % 9 === 5) cell.classList.add("col-3");
-    if (Math.floor(i / 9) === 2 || Math.floor(i / 9) === 5) cell.classList.add("row-3");
     if (given) {
       cell.value = given;
       cell.readOnly = true;
@@ -95,43 +105,140 @@ async function startSudoku() {
     } else if (sudoku.entries[i]) {
       cell.value = sudoku.entries[i];
     }
-    grid.appendChild(cell);
+    const notes = document.createElement("div");
+    notes.className = "notes";
+    notes.setAttribute("aria-hidden", "true");
+    for (let d = 1; d <= 9; d++) notes.appendChild(document.createElement("span"));
+    box.append(cell, notes);
+    grid.appendChild(box);
+    return cell;
   });
+  cellEls.forEach((_, i) => drawNotes(i));
   refreshSudoku();
+  highlightSame(highlightedDigit());
 }
 
+const editable = (i) => !sudoku.puzzle[i];
+
+const peers = (i) =>
+  [...Array(81).keys()].filter(
+    (j) => j !== i && (Math.floor(j / 9) === Math.floor(i / 9) || j % 9 === i % 9 || Sudoku.box(j) === Sudoku.box(i))
+  );
+
 function setCell(i, value) {
-  if (sudoku.puzzle[i]) return;
+  if (!editable(i)) return;
   sudoku.entries[i] = value;
-  const cell = $("sudoku-grid").children[i];
+  const cell = cellEls[i];
   cell.value = value || "";
   cell.classList.remove("wrong");
+  if (value) {
+    // A placed number can't also be a candidate anywhere it can see.
+    sudoku.notes[i] = 0;
+    for (const j of peers(i)) {
+      if (sudoku.notes[j] & (1 << value)) {
+        sudoku.notes[j] &= ~(1 << value);
+        drawNotes(j);
+      }
+    }
+  }
+  drawNotes(i);
   saveSudoku();
   refreshSudoku();
-  highlightSame(value);
+  highlightSame(tool > 0 ? tool : value);
+}
+
+function toggleNote(i, d) {
+  if (!editable(i) || sudoku.entries[i]) return;
+  sudoku.notes[i] ^= 1 << d;
+  drawNotes(i);
+  saveSudoku();
+}
+
+function clearCell(i) {
+  if (!editable(i)) return;
+  sudoku.notes[i] = 0;
+  setCell(i, 0);
+}
+
+function drawNotes(i) {
+  const shown = sudoku.entries[i] ? 0 : sudoku.notes[i];
+  [...cellEls[i].nextSibling.children].forEach((span, k) => {
+    span.textContent = shown & (1 << (k + 1)) ? k + 1 : "";
+  });
+}
+
+// Typing or tapping a number: a note in notes mode, otherwise the cell's value.
+function enterDigit(i, d, toggle) {
+  if (notesMode) toggleNote(i, d);
+  else setCell(i, toggle && sudoku.entries[i] === d ? 0 : d);
+}
+
+function highlightedDigit() {
+  if (tool > 0) return tool;
+  const cell = document.activeElement;
+  return cellEls.includes(cell) ? Number(cell.value) || 0 : 0;
 }
 
 function highlightSame(value) {
-  for (const cell of $("sudoku-grid").children) {
-    cell.classList.toggle("same", !!value && cell.value === String(value));
-  }
+  const d = Number(value) || 0;
+  cellEls.forEach((cell, i) => {
+    cell.classList.toggle("same", !!d && cell.value === String(d));
+    [...cell.nextSibling.children].forEach((span, k) => span.classList.toggle("same", k + 1 === d));
+  });
 }
 
-function focusedValue() {
-  const cell = document.activeElement;
-  return cell && cell.parentElement === $("sudoku-grid") ? cell.value : "";
+function setTool(next) {
+  tool = tool === next ? null : next;
+  document.querySelectorAll("#sudoku-pad button").forEach((b) => {
+    const value = b.dataset.digit ? Number(b.dataset.digit) : b.dataset.tool;
+    b.setAttribute("aria-pressed", String(value === tool));
+  });
+  highlightSame(highlightedDigit());
 }
+
+function setNotesMode(on) {
+  notesMode = on;
+  $("sudoku-notes").setAttribute("aria-pressed", String(on));
+}
+
+$("sudoku-pad").addEventListener("click", (e) => {
+  const btn = e.target.closest("button");
+  if (!btn || !sudoku) return;
+  setTool(btn.dataset.digit ? Number(btn.dataset.digit) : btn.dataset.tool);
+});
+
+$("sudoku-notes").addEventListener("click", () => setNotesMode(!notesMode));
+
+$("sudoku-fill-notes").addEventListener("click", () => {
+  if (!sudoku) return;
+  sudoku.puzzle.forEach((given, i) => {
+    if (!given && !sudoku.entries[i]) sudoku.notes[i] = ALL_NOTES;
+    drawNotes(i);
+  });
+  saveSudoku();
+  highlightSame(highlightedDigit());
+});
+
+// With a number or the eraser picked, tapping a square uses it.
+$("sudoku-grid").addEventListener("click", (e) => {
+  if (e.target.tagName !== "INPUT" || !tool) return;
+  const i = Number(e.target.dataset.i);
+  if (tool === "erase") clearCell(i);
+  else enterDigit(i, tool, true);
+});
 
 $("sudoku-grid").addEventListener("mouseover", (e) => {
-  if (e.target.tagName === "INPUT") highlightSame(e.target.value);
+  if (e.target.tagName === "INPUT" && !tool) highlightSame(e.target.value);
 });
-$("sudoku-grid").addEventListener("mouseleave", () => highlightSame(focusedValue()));
-$("sudoku-grid").addEventListener("focusin", (e) => highlightSame(e.target.value));
+$("sudoku-grid").addEventListener("mouseleave", () => highlightSame(highlightedDigit()));
+$("sudoku-grid").addEventListener("focusin", (e) => {
+  if (!tool) highlightSame(e.target.value);
+});
 
 $("sudoku-check").addEventListener("click", () => {
   if (!sudoku) return;
   let wrong = 0;
-  [...$("sudoku-grid").children].forEach((cell, i) => {
+  cellEls.forEach((cell, i) => {
     const bad = !sudoku.puzzle[i] && sudoku.entries[i] && sudoku.entries[i] !== sudoku.solution[i];
     cell.classList.toggle("wrong", !!bad);
     if (bad) wrong++;
@@ -143,7 +250,13 @@ $("sudoku-check").addEventListener("click", () => {
 
 function refreshSudoku() {
   const bad = Sudoku.conflicts(sudoku.entries);
-  [...$("sudoku-grid").children].forEach((cell, i) => cell.classList.toggle("conflict", bad.has(i)));
+  cellEls.forEach((cell, i) => cell.classList.toggle("conflict", bad.has(i)));
+  // Dim numbers that are all on the board already.
+  const counts = new Array(10).fill(0);
+  sudoku.entries.forEach((v) => counts[v]++);
+  document.querySelectorAll("#sudoku-pad button[data-digit]").forEach((b) => {
+    b.classList.toggle("complete", counts[Number(b.dataset.digit)] >= 9);
+  });
   const full = sudoku.entries.every(Boolean);
   const msg = $("sudoku-msg");
   if (full && sudoku.entries.every((v, i) => v === sudoku.solution[i])) {
@@ -166,13 +279,19 @@ $("sudoku-grid").addEventListener("keydown", (e) => {
   const moves = { ArrowUp: -9, ArrowDown: 9, ArrowLeft: -1, ArrowRight: 1 };
   if (e.key in moves) {
     const j = i + moves[e.key];
-    if (j >= 0 && j < 81) $("sudoku-grid").children[j].focus();
+    if (j >= 0 && j < 81) cellEls[j].focus();
     e.preventDefault();
   } else if (/^[1-9]$/.test(e.key)) {
-    setCell(i, Number(e.key));
+    enterDigit(i, Number(e.key), false);
     e.preventDefault();
   } else if (["Backspace", "Delete", "0", " "].includes(e.key)) {
-    setCell(i, 0);
+    clearCell(i);
+    e.preventDefault();
+  } else if (e.key === "n" || e.key === "N") {
+    setNotesMode(!notesMode);
+    e.preventDefault();
+  } else if (e.key === "Escape") {
+    if (tool) setTool(tool);
     e.preventDefault();
   } else if (e.key.length === 1) {
     e.preventDefault();
@@ -183,7 +302,12 @@ $("sudoku-grid").addEventListener("keydown", (e) => {
 $("sudoku-grid").addEventListener("input", (e) => {
   const i = Number(e.target.dataset.i);
   const digit = e.target.value.replace(/[^1-9]/g, "").slice(-1);
-  setCell(i, digit ? Number(digit) : 0);
+  if (notesMode && digit) {
+    e.target.value = sudoku.entries[i] || "";
+    toggleNote(i, Number(digit));
+  } else {
+    setCell(i, digit ? Number(digit) : 0);
+  }
 });
 
 /* ---------- Math sprint ---------- */
