@@ -37,7 +37,8 @@ function key(page, el, k) {
   return e;
 }
 
-const cells = (p) => [...p.$("sudoku-grid").children];
+const cells = (p) => [...p.$("sudoku-grid").querySelectorAll("input")];
+const boxes = (p) => [...p.$("sudoku-grid").children];
 
 async function typeDigits(p, indexes, valueOf) {
   for (const i of indexes) key(p, cells(p)[i], String(valueOf(i)));
@@ -115,8 +116,8 @@ test("sudoku board", async (t) => {
   });
   await t.test("draws the 3×3 box lines", async () => {
     const p = await gamesPage();
-    assert.equal(cells(p).filter((c) => c.classList.contains("col-3")).length, 18);
-    assert.equal(cells(p).filter((c) => c.classList.contains("row-3")).length, 18);
+    assert.equal(boxes(p).filter((c) => c.classList.contains("col-3")).length, 18);
+    assert.equal(boxes(p).filter((c) => c.classList.contains("row-3")).length, 18);
   });
   await t.test("labels cells by row and column", async () => {
     const p = await gamesPage();
@@ -540,4 +541,281 @@ test("all three puzzles in a row unlock Shorts", async () => {
   assert.equal(s.locked, false);
   assert.equal(s.remaining, 60);
   assert.equal(p.$("done-time").textContent, "1:00");
+});
+
+test("sudoku number pad and notes", async (t) => {
+  const padButton = (p, d) => p.document.querySelector(`#sudoku-pad button[data-digit="${d}"]`);
+  const eraser = (p) => p.document.querySelector('#sudoku-pad button[data-tool="erase"]');
+  const notesOf = (p, i) => [...boxes(p)[i].querySelector(".notes").children].map((s) => s.textContent).join("");
+  const sameCells = (p) => cells(p).flatMap((c, i) => (c.classList.contains("same") ? [i] : []));
+  const where = (grid, d) => grid.flatMap((v, i) => (v === d ? [i] : []));
+  const [a, b] = EMPTY_CELLS; // 2 and 3: same row, so they are peers
+  const far = EMPTY_CELLS.find((i) => Math.floor(i / 9) > 2 && i % 9 > 3); // shares no row, column or box with a
+
+  await t.test("has 1 to 9 and an eraser, none picked", async () => {
+    const p = await gamesPage();
+    const labels = [...p.document.querySelectorAll("#sudoku-pad button")].map((x) => x.textContent);
+    assert.deepEqual(labels, ["1", "2", "3", "4", "5", "6", "7", "8", "9", "⌫"]);
+    assert.ok([...p.document.querySelectorAll("#sudoku-pad button")].every((x) => x.getAttribute("aria-pressed") === "false"));
+  });
+  await t.test("squares don't open the on-screen keyboard", async () => {
+    const p = await gamesPage();
+    assert.ok(cells(p).every((c) => c.inputMode === "none"));
+  });
+  await t.test("picking a number highlights it across the board", async () => {
+    const p = await gamesPage();
+    padButton(p, 5).click();
+    assert.equal(padButton(p, 5).getAttribute("aria-pressed"), "true");
+    assert.deepEqual(sameCells(p), where(PUZZLE, 5));
+  });
+  await t.test("picking it again lets go of it", async () => {
+    const p = await gamesPage();
+    padButton(p, 5).click();
+    padButton(p, 5).click();
+    assert.equal(padButton(p, 5).getAttribute("aria-pressed"), "false");
+    assert.deepEqual(sameCells(p), []);
+  });
+  await t.test("picking another number moves the pick", async () => {
+    const p = await gamesPage();
+    padButton(p, 5).click();
+    padButton(p, 8).click();
+    assert.equal(padButton(p, 5).getAttribute("aria-pressed"), "false");
+    assert.equal(padButton(p, 8).getAttribute("aria-pressed"), "true");
+    assert.deepEqual(sameCells(p), where(PUZZLE, 8));
+  });
+  await t.test("Escape lets go of the picked number", async () => {
+    const p = await gamesPage();
+    padButton(p, 5).click();
+    key(p, cells(p)[a], "Escape");
+    assert.equal(padButton(p, 5).getAttribute("aria-pressed"), "false");
+  });
+  await t.test("tapping a square places the picked number", async () => {
+    const p = await gamesPage();
+    padButton(p, 4).click();
+    cells(p)[a].click();
+    await flush();
+    assert.equal(cells(p)[a].value, "4");
+    assert.equal(p.bg.data.puzzles.sudoku.entries[a], 4);
+  });
+  await t.test("the placed number joins the highlight", async () => {
+    const p = await gamesPage();
+    padButton(p, 4).click();
+    cells(p)[a].click();
+    assert.deepEqual(sameCells(p), [...where(PUZZLE, 4), a].sort((x, y) => x - y));
+  });
+  await t.test("tapping it again takes it out", async () => {
+    const p = await gamesPage();
+    padButton(p, 4).click();
+    cells(p)[a].click();
+    cells(p)[a].click();
+    assert.equal(cells(p)[a].value, "");
+  });
+  await t.test("tapping a square with another number replaces it", async () => {
+    const p = await gamesPage();
+    padButton(p, 4).click();
+    cells(p)[a].click();
+    padButton(p, 1).click();
+    cells(p)[a].click();
+    assert.equal(cells(p)[a].value, "1");
+  });
+  await t.test("tapping a given changes nothing", async () => {
+    const p = await gamesPage();
+    padButton(p, 4).click();
+    cells(p)[0].click();
+    assert.equal(cells(p)[0].value, "5");
+  });
+  await t.test("tapping with nothing picked places nothing", async () => {
+    const p = await gamesPage();
+    cells(p)[a].click();
+    assert.equal(cells(p)[a].value, "");
+  });
+  await t.test("the eraser clears a number", async () => {
+    const p = await gamesPage();
+    key(p, cells(p)[a], "4");
+    eraser(p).click();
+    cells(p)[a].click();
+    assert.equal(cells(p)[a].value, "");
+    assert.equal(eraser(p).getAttribute("aria-pressed"), "true");
+  });
+  await t.test("the eraser clears notes", async () => {
+    const p = await gamesPage();
+    p.$("sudoku-fill-notes").click();
+    eraser(p).click();
+    cells(p)[a].click();
+    assert.equal(notesOf(p, a), "");
+  });
+  await t.test("the eraser leaves givens alone", async () => {
+    const p = await gamesPage();
+    eraser(p).click();
+    cells(p)[0].click();
+    assert.equal(cells(p)[0].value, "5");
+  });
+  await t.test("a number is dimmed once all nine are on the board", async () => {
+    const p = await gamesPage();
+    assert.equal(padButton(p, 9).classList.contains("complete"), false);
+    await typeDigits(p, EMPTY_CELLS.filter((i) => SOLUTION[i] === 9), () => 9);
+    assert.equal(padButton(p, 9).classList.contains("complete"), true);
+    assert.equal(padButton(p, 8).classList.contains("complete"), false);
+  });
+  await t.test("the whole puzzle can be solved from the pad", async () => {
+    const p = await gamesPage();
+    for (let d = 1; d <= 9; d++) {
+      padButton(p, d).click();
+      EMPTY_CELLS.filter((i) => SOLUTION[i] === d).forEach((i) => cells(p)[i].click());
+    }
+    await flush();
+    assert.equal(p.$("sudoku-msg").textContent, "Solved!");
+    await p.clock.advance(700);
+    assert.equal(p.bg.data.state.solved.sudoku, true);
+  });
+
+  await t.test("Notes is off to start with", async () => {
+    const p = await gamesPage();
+    assert.equal(p.$("sudoku-notes").getAttribute("aria-pressed"), "false");
+    assert.ok(EMPTY_CELLS.every((i) => notesOf(p, i) === ""));
+  });
+  await t.test("the Notes button toggles notes mode", async () => {
+    const p = await gamesPage();
+    p.$("sudoku-notes").click();
+    assert.equal(p.$("sudoku-notes").getAttribute("aria-pressed"), "true");
+    p.$("sudoku-notes").click();
+    assert.equal(p.$("sudoku-notes").getAttribute("aria-pressed"), "false");
+  });
+  await t.test("N toggles notes mode from the board", async () => {
+    const p = await gamesPage();
+    const e = key(p, cells(p)[a], "n");
+    assert.equal(p.$("sudoku-notes").getAttribute("aria-pressed"), "true");
+    assert.equal(e.defaultPrevented, true);
+    key(p, cells(p)[a], "N");
+    assert.equal(p.$("sudoku-notes").getAttribute("aria-pressed"), "false");
+  });
+  await t.test("in notes mode a tap adds a small number", async () => {
+    const p = await gamesPage();
+    p.$("sudoku-notes").click();
+    padButton(p, 3).click();
+    cells(p)[a].click();
+    padButton(p, 7).click();
+    cells(p)[a].click();
+    assert.equal(notesOf(p, a), "37");
+    assert.equal(cells(p)[a].value, "");
+  });
+  await t.test("tapping a note again removes it", async () => {
+    const p = await gamesPage();
+    p.$("sudoku-notes").click();
+    padButton(p, 3).click();
+    cells(p)[a].click();
+    cells(p)[a].click();
+    assert.equal(notesOf(p, a), "");
+  });
+  await t.test("in notes mode typed digits become notes", async () => {
+    const p = await gamesPage();
+    p.$("sudoku-notes").click();
+    key(p, cells(p)[a], "2");
+    key(p, cells(p)[a], "6");
+    key(p, cells(p)[a], "2");
+    assert.equal(notesOf(p, a), "6");
+    assert.equal(cells(p)[a].value, "");
+  });
+  await t.test("in notes mode a soft-keyboard digit becomes a note", async () => {
+    const p = await gamesPage();
+    p.$("sudoku-notes").click();
+    const c = cells(p)[a];
+    c.value = "8";
+    c.dispatchEvent(new p.window.Event("input", { bubbles: true }));
+    assert.equal(notesOf(p, a), "8");
+    assert.equal(c.value, "");
+  });
+  await t.test("notes can't go on a given", async () => {
+    const p = await gamesPage();
+    p.$("sudoku-notes").click();
+    key(p, cells(p)[0], "2");
+    assert.equal(notesOf(p, 0), "");
+  });
+  await t.test("notes can't go on a filled square", async () => {
+    const p = await gamesPage();
+    key(p, cells(p)[a], "4");
+    p.$("sudoku-notes").click();
+    key(p, cells(p)[a], "2");
+    assert.equal(notesOf(p, a), "");
+    assert.equal(cells(p)[a].value, "4");
+  });
+  await t.test("placing a number clears that square's notes", async () => {
+    const p = await gamesPage();
+    p.$("sudoku-notes").click();
+    key(p, cells(p)[a], "2");
+    key(p, cells(p)[a], "4");
+    p.$("sudoku-notes").click();
+    key(p, cells(p)[a], "4");
+    assert.equal(notesOf(p, a), "");
+    key(p, cells(p)[a], "Backspace");
+    assert.equal(notesOf(p, a), "", "the notes don't come back");
+  });
+  await t.test("placing a number removes it from notes it can see", async () => {
+    const p = await gamesPage();
+    p.$("sudoku-fill-notes").click();
+    key(p, cells(p)[a], "4");
+    assert.equal(notesOf(p, b), "12356789");
+    assert.equal(notesOf(p, far), "123456789");
+  });
+  await t.test("Backspace clears notes", async () => {
+    const p = await gamesPage();
+    p.$("sudoku-fill-notes").click();
+    key(p, cells(p)[a], "Backspace");
+    assert.equal(notesOf(p, a), "");
+  });
+  await t.test("Fill all notes puts 1 to 9 in every empty square", async () => {
+    const p = await gamesPage();
+    key(p, cells(p)[a], "4");
+    p.$("sudoku-fill-notes").click();
+    EMPTY_CELLS.filter((i) => i !== a).forEach((i) => assert.equal(notesOf(p, i), "123456789", `cell ${i}`));
+    assert.equal(notesOf(p, a), "");
+    assert.equal(notesOf(p, 0), "");
+    assert.equal(cells(p)[a].value, "4");
+  });
+  await t.test("Fill all notes leaves no hidden notes under a placed number", async () => {
+    const p = await gamesPage();
+    padButton(p, 4).click();
+    cells(p)[a].click();
+    p.$("sudoku-fill-notes").click();
+    cells(p)[a].click(); // tap 4 again to take it out
+    assert.equal(cells(p)[a].value, "");
+    assert.equal(notesOf(p, a), "");
+  });
+  await t.test("the picked number is highlighted inside notes", async () => {
+    const p = await gamesPage();
+    p.$("sudoku-fill-notes").click();
+    padButton(p, 6).click();
+    const spans = [...boxes(p)[a].querySelector(".notes").children];
+    assert.deepEqual(spans.flatMap((s, k) => (s.classList.contains("same") ? [k + 1] : [])), [6]);
+  });
+  await t.test("hovering doesn't change the highlight while a number is picked", async () => {
+    const p = await gamesPage();
+    padButton(p, 5).click();
+    cells(p)[1].dispatchEvent(new p.window.MouseEvent("mouseover", { bubbles: true }));
+    assert.deepEqual(sameCells(p), where(PUZZLE, 5));
+  });
+  await t.test("hovering highlights as before with nothing picked", async () => {
+    const p = await gamesPage();
+    cells(p)[1].dispatchEvent(new p.window.MouseEvent("mouseover", { bubbles: true }));
+    assert.deepEqual(sameCells(p), where(PUZZLE, 3));
+  });
+  await t.test("notes are saved and come back", async () => {
+    const p = await gamesPage();
+    p.$("sudoku-notes").click();
+    key(p, cells(p)[a], "2");
+    key(p, cells(p)[a], "9");
+    await flush();
+    const saved = p.bg.data.puzzles.sudoku;
+    assert.equal(saved.notes[a], (1 << 2) | (1 << 9));
+    const again = await gamesPage({ puzzles: { sudoku: saved } });
+    assert.equal(notesOf(again, a), "29");
+  });
+  await t.test("progress saved before notes existed still loads", async () => {
+    const entries = PUZZLE.slice();
+    entries[a] = 4;
+    const p = await gamesPage({ puzzles: { sudoku: { difficulty: "medium", puzzle: PUZZLE, solution: SOLUTION, entries } } });
+    assert.equal(cells(p)[a].value, "4");
+    p.$("sudoku-fill-notes").click();
+    assert.equal(notesOf(p, b), "123456789");
+  });
 });
