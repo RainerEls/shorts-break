@@ -7,6 +7,8 @@ on:
     paths-ignore:
       - ".gitea/**"
       - "test/**"
+      - README.md
+      - "docs/**"
       - package.json
       - package-lock.json
   pull_request:

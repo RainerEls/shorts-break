@@ -1,60 +1,62 @@
 # Shorts Break
 
-A Firefox extension for people who open YouTube Shorts "for a minute" and look up an hour later.
+A Firefox add-on that limits how much time you spend on YouTube Shorts.
 
-You get a time budget for Shorts (10 minutes by default). It only goes down while a Short is actually playing in front of you, and each Short only counts once, so loops and rewatches are free. When the budget runs out, the Short you're watching plays to the end, and then Shorts are locked. To unlock them you solve a sudoku, a quick round of mental math and a memory game, and then your time resets.
+You get 10 minutes of Shorts by default. The timer only runs while a Short is playing in a tab you can see, and each second of a Short only counts once, so replays are free. When time is up, the Short you're on plays to the end and then Shorts lock. To unlock them, you solve a sudoku, a few arithmetic problems and a memory game, and your time resets.
 
-It won't stop someone who really wants to get around it. You can always disable it. It's there to make you stop and think before scrolling more.
+It's a speed bump, not a hard block. You can always disable the add-on.
 
-## How it behaves
+Available on [addons.mozilla.org](https://addons.mozilla.org/firefox/addon/shorts-break/).
 
-- A small timer sits in the corner of the Shorts page. It turns red for the last minute and tells you when it isn't counting.
-- Paused videos, background tabs and minimised windows don't use time.
-- Looping a Short, rewinding, or scrolling back to one of the last three you watched doesn't use time either.
-- Once locked, any `youtube.com/shorts` page sends you to the puzzle page. The rest of YouTube still works.
-- Puzzles you've finished stay finished if you close the tab, and so does your sudoku progress.
+## How it works
+
+- A timer in the top-right corner of the Shorts page shows the time left. It turns red in the last minute and tells you when it isn't counting.
+- Paused videos, background tabs and minimised windows don't count.
+- Neither does replaying a Short, rewinding, or scrolling back to one of the last three you watched.
+- While Shorts are locked, any `youtube.com/shorts` page takes you to the puzzles. The rest of YouTube works as usual.
+- Solved puzzles and sudoku progress are saved, so closing the tab doesn't lose them.
 
 <img src="docs/screenshots/shorts-page.png" width="650" alt="A Shorts page, video blurred, with an arrow pointing to the timer in the top-right corner showing 28:49, paused">
 
-## The puzzles
+## Puzzles
 
-**Sudoku.** A fresh puzzle each time, with exactly one solution. Clashing numbers turn red as you type. Hover over or select a cell to highlight every cell with the same number. **Check** marks wrong entries red but leaves them in place, so you can see where you went wrong.
+Sudoku: a new puzzle every time, always with exactly one solution. Clashing numbers turn red as you type, and hovering over or selecting a cell highlights the same number elsewhere. **Check** marks wrong entries in red without removing them.
 
 <img src="docs/screenshots/sudoku.png" width="380" alt="Sudoku with every 5 highlighted and two wrong entries marked red">
 
-**Math sprint.** Addition, subtraction and multiplication. Get 10 right; each wrong answer costs you one.
+Math sprint: addition, subtraction and multiplication. You need 10 correct answers, and a wrong one takes a point away.
 
 <img src="docs/screenshots/math.png" width="420" alt="Math sprint, four of ten answered">
 
-**Memory pairs.** Sixteen cards, eight pairs.
+Memory: sixteen cards, eight pairs.
 
 <img src="docs/screenshots/memory.png" width="380" alt="Memory pairs game, partly solved">
 
 ## Settings
 
-Click the toolbar icon to see how much time you have left.
+The toolbar button shows how much time you have left.
 
 <img src="docs/screenshots/popup.png" width="292" alt="Toolbar popup showing 6:22 left">
 
-**Settings** in that popup, or the add-on's **Preferences** tab in `about:addons`, lets you change:
+Its **Settings** button, or the add-on's **Preferences** tab in `about:addons`, lets you set:
 
-- the time budget (1–240 minutes)
-- sudoku difficulty (easy, medium or hard)
-- how many math problems you need to get right
+- the time limit, 1 to 240 minutes
+- the sudoku difficulty: easy, medium or hard
+- how many math problems you need to get right, 3 to 30
 
 <img src="docs/screenshots/settings.png" width="500" alt="Shorts Break preferences in the Firefox add-ons manager">
 
-Changing the budget moves the time you have left by the same amount, but it won't unlock Shorts once they're locked.
+Changing the time limit adds the difference to, or takes it from, the time you have left. It won't unlock Shorts that are already locked.
 
-## Installing
+## Running it from source
 
-To try it out, open `about:debugging#/runtime/this-firefox`, click **Load Temporary Add-on…** and pick `manifest.json` from this folder. Firefox forgets temporary add-ons when it restarts.
+Open `about:debugging#/runtime/this-firefox`, click **Load Temporary Add-on…** and pick `manifest.json`. Firefox removes temporary add-ons when it restarts.
 
-For a permanent install, download `shorts-break-<version>.zip` from the latest release. Regular Firefox only installs add-ons signed by Mozilla, so that zip has to go through addons.mozilla.org first.
+Each release on this repository has a `shorts-break-<version>.zip`, but Firefox only installs add-ons signed by Mozilla, so use the addons.mozilla.org listing for a normal install.
 
 ## Tests
 
-`npm ci && npm test` runs the unit tests with Node's test runner. Each script runs in jsdom with a fake `browser` API and a fake clock, so the timer, the lock, the puzzles and the pages are tested without Firefox. A pull request can't be merged until they and `web-ext lint` pass.
+`npm ci && npm test` runs the unit tests with Node's test runner. The scripts run in jsdom with a fake `browser` API, so no browser is needed. Pull requests can't be merged until the tests and `web-ext lint` pass.
 
 ## License
 
