@@ -3,7 +3,9 @@ async function refresh() {
   document.body.classList.toggle("locked", s.locked);
   document.getElementById("label").textContent = s.locked
     ? `Locked · ${GAMES.filter((g) => s.solved[g]).length} / ${GAMES.length} puzzles solved`
-    : "Shorts time left";
+    : s.finishing
+      ? "Locks when this Short ends"
+      : "Shorts time left";
   document.getElementById("time").textContent = s.locked ? "🔒" : formatTime(s.remaining);
   document.getElementById("bar").style.width = `${(s.remaining / s.limitSeconds) * 100}%`;
   document.getElementById("puzzles").hidden = !s.locked;

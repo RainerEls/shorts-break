@@ -2,7 +2,7 @@
 
 A Firefox extension for people who open YouTube Shorts "for a minute" and look up an hour later.
 
-You get a time budget for Shorts (10 minutes by default). It only goes down while a Short is actually playing in front of you, and each Short only counts once, so loops and rewatches are free. When the budget runs out, Shorts are locked. To unlock them you solve a sudoku, a quick round of mental math and a memory game, and then your time resets.
+You get a time budget for Shorts (10 minutes by default). It only goes down while a Short is actually playing in front of you, and each Short only counts once, so loops and rewatches are free. When the budget runs out, the Short you're watching plays to the end, and then Shorts are locked. To unlock them you solve a sudoku, a quick round of mental math and a memory game, and then your time resets.
 
 It won't stop someone who really wants to get around it. You can always disable it. It's there to make you stop and think before scrolling more.
 

@@ -47,10 +47,19 @@
     if (!onShorts()) return hidePill();
     const video = document.visibilityState === "visible" && playingVideo();
     const id = location.pathname.split("/")[2] || "";
+    // Shorts loop, so a jump back to the start means this one has played through.
+    const looped = !!video && last?.id === id && video.currentTime < last.t - 1;
+    const ended = [...document.querySelectorAll("video")].some((v) => v.ended);
     const counting = !!video && isFirstViewing(id, video.currentTime);
     let status;
     try {
-      status = await browser.runtime.sendMessage({ type: "tick", playing: counting });
+      status = await browser.runtime.sendMessage({
+        type: "tick",
+        id,
+        active: !!video,
+        playing: counting,
+        finished: looped || ended,
+      });
     } catch {
       return;
     }
@@ -58,6 +67,7 @@
       document.querySelectorAll("video").forEach((v) => v.pause());
       return;
     }
+    if (status.finishing) return showPill("⏱ 0:00 · locks when this Short ends", true);
     const note = counting ? "" : video ? " · rewatch, not counting" : " · paused";
     const label = `⏱ ${formatTime(status.remaining)}${note}`;
     showPill(label, status.remaining <= 60);

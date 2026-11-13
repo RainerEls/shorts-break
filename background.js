@@ -1,5 +1,7 @@
 const SHORTS_PATTERN = /^https?:\/\/([a-z0-9-]+\.)*youtube\.com\/shorts(\/|$|\?)/i;
 const GAMES_URL = browser.runtime.getURL("games.html");
+// Longest a Short can run; the Short playing at 0:00 never gets longer than this to finish.
+const FINISH_LIMIT_MS = 3 * 60 * 1000;
 
 let settings = { ...SETTINGS_DEFAULTS };
 let state = null;
@@ -16,6 +18,7 @@ function freshState() {
   return {
     remaining: settings.limitMinutes * 60,
     locked: false,
+    finishing: null,
     solved: {},
   };
 }
@@ -37,6 +40,7 @@ function publicState() {
   return {
     remaining: state.remaining,
     locked: state.locked,
+    finishing: !!state.finishing,
     solved: state.solved,
     limitSeconds: settings.limitMinutes * 60,
     settings,
@@ -50,6 +54,7 @@ function redirectTab(tabId, fromUrl) {
 
 async function lockNow() {
   state.locked = true;
+  state.finishing = null;
   state.remaining = 0;
   state.solved = {};
   await browser.storage.local.remove("puzzles");
@@ -64,12 +69,18 @@ async function onTick(msg, sender) {
     return publicState();
   }
   const now = Date.now();
+  // Time is up: the Short that was playing may finish, and moving on to another one locks.
+  if (state.finishing) {
+    const movedOn = msg.active && msg.id !== state.finishing.id;
+    if (msg.finished || movedOn || now - state.finishing.since > FINISH_LIMIT_MS) await lockNow();
+    return publicState();
+  }
   // Several visible tabs can tick at once; count each wall-clock second only once.
   if (msg.playing && now - lastTickAt >= 900) {
     lastTickAt = now;
     state.remaining = Math.max(0, state.remaining - 1);
-    if (state.remaining === 0) await lockNow();
-    else await save();
+    if (state.remaining === 0) state.finishing = { id: msg.id, since: now };
+    await save();
   }
   return publicState();
 }
@@ -91,7 +102,8 @@ async function onSettings(next) {
   const newLimit = settings.limitMinutes * 60;
   if (!state.locked) {
     state.remaining = Math.min(newLimit, Math.max(0, state.remaining + newLimit - oldLimit));
-    if (state.remaining === 0) state.remaining = 1;
+    if (state.remaining > 0) state.finishing = null;
+    else if (!state.finishing) state.remaining = 1;
   }
   await browser.storage.local.set({ settings });
   await save();
