@@ -64,7 +64,14 @@ test("startup", async (t) => {
   });
   await t.test("sets the badge to the minutes left", async () => {
     const bg = await loadBackground();
-    assert.equal(bg.calls.badge.at(-1), "10m");
+    assert.equal(bg.calls.badge.at(-1), "10");
+  });
+  await t.test("keeps the badge to two characters", async () => {
+    for (const [limitMinutes, expected] of [[1, "1"], [99, "99"], [100, "2h"], [120, "2h"], [121, "3h"], [240, "4h"]]) {
+      const bg = await loadBackground({ storage: { settings: { limitMinutes } } });
+      assert.equal(bg.calls.badge.at(-1), expected, `${limitMinutes} minutes`);
+      assert.ok([...expected].length <= 2);
+    }
   });
   await t.test("shows a lock on the badge when locked", async () => {
     const bg = await loadBackground({ storage: { state: { remaining: 0, locked: true, solved: {} } } });
@@ -113,7 +120,7 @@ test("counting time", async (t) => {
   await t.test("rounds the badge up to whole minutes", async () => {
     const bg = await loadBackground();
     await play(bg, 61);
-    assert.equal(bg.calls.badge.at(-1), "9m");
+    assert.equal(bg.calls.badge.at(-1), "9");
   });
   await t.test("serialises concurrent ticks", async () => {
     const bg = await loadBackground();
@@ -313,7 +320,7 @@ test("solving puzzles", async (t) => {
     assert.equal(s.locked, false);
     assert.equal(s.remaining, 60);
     assert.deepEqual({ ...s.solved }, {});
-    assert.equal(bg.calls.badge.at(-1), "1m");
+    assert.equal(bg.calls.badge.at(-1), "1");
   });
   await t.test("unlocks whatever the order", async () => {
     const bg = await loadBackground(lockedState());
