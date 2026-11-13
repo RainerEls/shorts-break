@@ -61,6 +61,8 @@ let cellEls = [];
 // The digit picked on the pad (1-9), "erase", or null.
 let tool = null;
 let notesMode = false;
+// Board snapshots before each change, newest last, for undo.
+let history = [];
 
 async function loadSudoku() {
   const { puzzles = {} } = await browser.storage.local.get("puzzles");
@@ -74,16 +76,20 @@ async function loadSudoku() {
   return fresh;
 }
 
-function saveSudoku() {
-  browser.storage.local.get("puzzles").then(({ puzzles = {} }) =>
-    browser.storage.local.set({ puzzles: { ...puzzles, sudoku } })
+function savePuzzle(name, value) {
+  return browser.storage.local.get("puzzles").then(({ puzzles = {} }) =>
+    browser.storage.local.set({ puzzles: { ...puzzles, [name]: value } })
   );
 }
+
+const saveSudoku = () => savePuzzle("sudoku", sudoku);
 
 async function startSudoku() {
   if (sudoku) return;
   $("sudoku-msg").textContent = "Generating…";
   sudoku = await loadSudoku();
+  history = [];
+  drawUndo();
   $("sudoku-msg").textContent = "";
   const grid = $("sudoku-grid");
   grid.replaceChildren();
@@ -170,6 +176,45 @@ function drawNotes(i) {
   });
 }
 
+const snapshot = () => ({ entries: sudoku.entries.slice(), notes: sudoku.notes.slice() });
+const sameBoard = (a, b) => a.entries.every((v, i) => v === b.entries[i]) && a.notes.every((v, i) => v === b.notes[i]);
+
+function drawUndo() {
+  $("sudoku-undo").disabled = !history.length;
+}
+
+// Runs one player action, remembering the board before it if it changed anything.
+function act(change) {
+  const before = snapshot();
+  change();
+  if (!sameBoard(before, sudoku)) {
+    history.push(before);
+    drawUndo();
+  }
+}
+
+function undo() {
+  const before = history.pop();
+  if (!before) return;
+  sudoku.entries = before.entries;
+  sudoku.notes = before.notes;
+  cellEls.forEach((cell, i) => {
+    cell.value = sudoku.entries[i] || "";
+    cell.classList.remove("wrong");
+    drawNotes(i);
+  });
+  drawUndo();
+  saveSudoku();
+  refreshSudoku();
+  highlightSame(highlightedDigit());
+}
+
+// With a number or the eraser picked, tapping a square or pressing Enter on it uses it.
+function useTool(i) {
+  if (tool === "erase") clearCell(i);
+  else if (tool) enterDigit(i, tool, true);
+}
+
 // Typing or tapping a number: a note in notes mode, otherwise the cell's value.
 function enterDigit(i, d, toggle) {
   if (notesMode) toggleNote(i, d);
@@ -210,24 +255,34 @@ $("sudoku-pad").addEventListener("click", (e) => {
   setTool(btn.dataset.digit ? Number(btn.dataset.digit) : btn.dataset.tool);
 });
 
+// The pad and the buttons below the board leave the selected square selected.
+for (const id of ["sudoku-pad", "sudoku-actions"]) {
+  $(id).addEventListener("mousedown", (e) => {
+    if (e.target.closest("button")) e.preventDefault();
+  });
+}
+
 $("sudoku-notes").addEventListener("click", () => setNotesMode(!notesMode));
+
+$("sudoku-undo").addEventListener("click", () => {
+  if (sudoku) undo();
+});
 
 $("sudoku-fill-notes").addEventListener("click", () => {
   if (!sudoku) return;
-  sudoku.puzzle.forEach((given, i) => {
-    if (!given && !sudoku.entries[i]) sudoku.notes[i] = ALL_NOTES;
-    drawNotes(i);
-  });
+  act(() =>
+    sudoku.puzzle.forEach((given, i) => {
+      if (!given && !sudoku.entries[i]) sudoku.notes[i] = ALL_NOTES;
+      drawNotes(i);
+    })
+  );
   saveSudoku();
   highlightSame(highlightedDigit());
 });
 
-// With a number or the eraser picked, tapping a square uses it.
 $("sudoku-grid").addEventListener("click", (e) => {
   if (e.target.tagName !== "INPUT" || !tool) return;
-  const i = Number(e.target.dataset.i);
-  if (tool === "erase") clearCell(i);
-  else enterDigit(i, tool, true);
+  act(() => useTool(Number(e.target.dataset.i)));
 });
 
 $("sudoku-grid").addEventListener("mouseover", (e) => {
@@ -280,15 +335,21 @@ $("sudoku-grid").addEventListener("keydown", (e) => {
   if (cell.tagName !== "INPUT") return;
   const i = Number(cell.dataset.i);
   const moves = { ArrowUp: -9, ArrowDown: 9, ArrowLeft: -1, ArrowRight: 1 };
-  if (e.key in moves) {
+  if ((e.ctrlKey || e.metaKey) && (e.key === "z" || e.key === "Z")) {
+    undo();
+    e.preventDefault();
+  } else if (e.key in moves) {
     const j = i + moves[e.key];
     if (j >= 0 && j < 81) cellEls[j].focus();
     e.preventDefault();
   } else if (/^[1-9]$/.test(e.key)) {
-    enterDigit(i, Number(e.key), false);
+    act(() => enterDigit(i, Number(e.key), false));
+    e.preventDefault();
+  } else if (e.key === "Enter") {
+    act(() => useTool(i));
     e.preventDefault();
   } else if (["Backspace", "Delete", "0", " "].includes(e.key)) {
-    clearCell(i);
+    act(() => clearCell(i));
     e.preventDefault();
   } else if (e.key === "n" || e.key === "N") {
     setNotesMode(!notesMode);
@@ -305,12 +366,14 @@ $("sudoku-grid").addEventListener("keydown", (e) => {
 $("sudoku-grid").addEventListener("input", (e) => {
   const i = Number(e.target.dataset.i);
   const digit = e.target.value.replace(/[^1-9]/g, "").slice(-1);
-  if (notesMode && digit) {
-    e.target.value = sudoku.entries[i] || "";
-    toggleNote(i, Number(digit));
-  } else {
-    setCell(i, digit ? Number(digit) : 0);
-  }
+  act(() => {
+    if (notesMode && digit) {
+      e.target.value = sudoku.entries[i] || "";
+      toggleNote(i, Number(digit));
+    } else {
+      setCell(i, digit ? Number(digit) : 0);
+    }
+  });
 });
 
 /* ---------- Math sprint ---------- */
@@ -392,57 +455,84 @@ $("math-form").addEventListener("submit", (e) => {
 /* ---------- Memory pairs ---------- */
 
 const SYMBOLS = ["🍎", "🚀", "🎲", "🌵", "🐙", "⚡", "🎧", "🧩", "🍩", "🦊", "🌙", "🔑"];
-const memory = { started: false, open: [], busy: false, matched: 0 };
+// The deal lives here, not on the cards, so a face-down card holds nothing to select or read.
+const memory = { started: false, deck: [], found: [], open: [], busy: false };
+const PAIRS = 8;
 
-function startMemory() {
-  if (memory.started) return;
-  memory.started = true;
-  const picks = SYMBOLS.slice().sort(() => Math.random() - 0.5).slice(0, 8);
+function deal() {
+  const picks = SYMBOLS.slice().sort(() => Math.random() - 0.5).slice(0, PAIRS);
   const deck = [...picks, ...picks];
   for (let i = deck.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [deck[i], deck[j]] = [deck[j], deck[i]];
   }
+  return deck;
+}
+
+function turn(card, up) {
+  const symbol = memory.deck[card.dataset.i];
+  card.textContent = up ? symbol : "";
+  card.classList.toggle("hidden-face", !up);
+  card.setAttribute("aria-label", up ? symbol : "Hidden card");
+}
+
+function allFound() {
+  const msg = $("memory-msg");
+  msg.textContent = "All pairs found!";
+  msg.className = "msg good";
+}
+
+// The deal is kept with the other puzzles, so coming back shows the same board,
+// finished if it was finished, until the next lock starts fresh ones.
+async function startMemory() {
+  if (memory.started) return;
+  memory.started = true;
+  const { puzzles = {} } = await browser.storage.local.get("puzzles");
+  const saved = puzzles.memory;
+  memory.deck = saved ? saved.deck : deal();
+  memory.found = saved ? saved.found : [];
+  if (status.solved.memory) memory.found = memory.deck.map((_, i) => i);
+  if (!saved) savePuzzle("memory", { deck: memory.deck, found: memory.found });
   const grid = $("memory-grid");
   grid.replaceChildren(
-    ...deck.map((symbol, i) => {
+    ...memory.deck.map((_, i) => {
       const card = document.createElement("button");
-      card.textContent = symbol;
-      card.dataset.symbol = symbol;
-      card.className = "hidden-face";
+      card.dataset.i = i;
       card.setAttribute("aria-label", `Card ${i + 1}`);
+      card.classList.add("hidden-face");
+      if (memory.found.includes(i)) {
+        turn(card, true);
+        card.classList.add("matched");
+      }
       return card;
     })
   );
+  if (memory.found.length === memory.deck.length) allFound();
 }
 
 $("memory-grid").addEventListener("click", (e) => {
   const card = e.target.closest("button");
   if (!card || memory.busy || !card.classList.contains("hidden-face")) return;
-  card.classList.remove("hidden-face");
-  card.setAttribute("aria-label", card.dataset.symbol);
+  turn(card, true);
   memory.open.push(card);
   if (memory.open.length < 2) return;
 
   const [a, b] = memory.open;
   memory.open = [];
-  if (a.dataset.symbol === b.dataset.symbol) {
+  if (a.textContent === b.textContent) {
     a.classList.add("matched");
     b.classList.add("matched");
-    memory.matched++;
-    if (memory.matched === 8) {
-      const msg = $("memory-msg");
-      msg.textContent = "All pairs found!";
-      msg.className = "msg good";
+    memory.found.push(Number(a.dataset.i), Number(b.dataset.i));
+    savePuzzle("memory", { deck: memory.deck, found: memory.found });
+    if (memory.found.length === memory.deck.length) {
+      allFound();
       if (status.locked && !status.solved.memory) setTimeout(() => markSolved("memory"), 700);
     }
   } else {
     memory.busy = true;
     setTimeout(() => {
-      for (const c of [a, b]) {
-        c.classList.add("hidden-face");
-        c.setAttribute("aria-label", "Hidden card");
-      }
+      turn(a, false);
+      turn(b, false);
       memory.busy = false;
     }, 800);
   }

@@ -21,7 +21,7 @@
     </header>
 
     <section id="game-sudoku" class="game" hidden>
-      <p class="muted">Fill every row, column and 3×3 box with 1–9. Pick a number, then tap squares to place it, or type on your keyboard.</p>
+      <p class="muted">Fill every row, column and 3×3 box with 1–9. Pick a number, then tap squares or press Enter to place it, or type on your keyboard.</p>
       <div id="sudoku-grid" class="sudoku"></div>
       <div id="sudoku-pad" class="sudoku-pad" role="group" aria-label="Numbers">
         <button type="button" data-digit="1" aria-pressed="false">1</button>
@@ -35,9 +35,10 @@
         <button type="button" data-digit="9" aria-pressed="false">9</button>
         <button type="button" data-tool="erase" aria-pressed="false" aria-label="Erase">⌫</button>
       </div>
-      <div class="sudoku-actions">
+      <div id="sudoku-actions" class="sudoku-actions">
+        <button id="sudoku-undo" type="button" title="Undo (Ctrl+Z)" disabled>↶ Undo</button>
         <button id="sudoku-notes" type="button" aria-pressed="false" title="Notes (N)">✎ Notes</button>
-        <button id="sudoku-fill-notes" type="button">Fill all notes</button>
+        <button id="sudoku-fill-notes" type="button" title="Pencil every number from 1 to 9 into every empty square">Note 1–9 everywhere</button>
         <button id="sudoku-check" type="button">Check</button>
       </div>
       <p id="sudoku-msg" class="msg" aria-live="polite"></p>
