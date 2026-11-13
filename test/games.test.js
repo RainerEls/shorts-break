@@ -757,6 +757,21 @@ test("sudoku number pad and notes", async (t) => {
     assert.equal(notesOf(p, b), "12356789");
     assert.equal(notesOf(p, far), "123456789");
   });
+  await t.test("a clashing number leaves the notes it can see alone", async () => {
+    const p = await gamesPage();
+    p.$("sudoku-fill-notes").click();
+    key(p, cells(p)[a], "5"); // the row's given 5 is at index 0
+    assert.ok(cells(p)[a].classList.contains("conflict"));
+    assert.equal(notesOf(p, b), "123456789");
+  });
+  await t.test("a clash with another entry leaves the notes alone too", async () => {
+    const p = await gamesPage();
+    key(p, cells(p)[a], "4");
+    p.$("sudoku-fill-notes").click();
+    key(p, cells(p)[b], "4");
+    const c = EMPTY_CELLS.find((i) => i !== a && i !== b && Math.floor(i / 9) === 0);
+    assert.equal(notesOf(p, c), "123456789");
+  });
   await t.test("Backspace clears notes", async () => {
     const p = await gamesPage();
     p.$("sudoku-fill-notes").click();

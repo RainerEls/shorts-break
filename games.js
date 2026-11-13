@@ -132,9 +132,12 @@ function setCell(i, value) {
   cell.value = value || "";
   cell.classList.remove("wrong");
   if (value) {
-    // A placed number can't also be a candidate anywhere it can see.
+    // A placed number can't also be a candidate anywhere it can see,
+    // unless it clashes there, in which case it is about to be fixed.
     sudoku.notes[i] = 0;
-    for (const j of peers(i)) {
+    const seen = peers(i);
+    const clashes = seen.some((j) => sudoku.entries[j] === value);
+    for (const j of clashes ? [] : seen) {
       if (sudoku.notes[j] & (1 << value)) {
         sudoku.notes[j] &= ~(1 << value);
         drawNotes(j);
