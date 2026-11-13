@@ -29,7 +29,10 @@ function save() {
 }
 
 function updateBadge() {
-  const text = state.locked ? "🔒" : `${Math.ceil(state.remaining / 60)}m`;
+  const minutes = Math.ceil(state.remaining / 60);
+  // The toolbar badge clips anything past two characters; the popup has the exact time.
+  const left = minutes < 100 ? String(minutes) : `${Math.ceil(minutes / 60)}h`;
+  const text = state.locked ? "🔒" : left;
   browser.browserAction.setBadgeText({ text });
   browser.browserAction.setBadgeBackgroundColor({
     color: state.locked ? "#ff4e45" : "#3a3f52",
