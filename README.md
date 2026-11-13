@@ -16,17 +16,17 @@ Available on [addons.mozilla.org](https://addons.mozilla.org/firefox/addon/short
 - While Shorts are locked, any `youtube.com/shorts` page takes you to the puzzles. The rest of YouTube works as usual.
 - Solved puzzles and sudoku progress are saved, so closing the tab doesn't lose them.
 
-<img src="docs/screenshots/shorts-page.png" width="650" alt="A Shorts page, video blurred, with an arrow pointing to the timer in the top-right corner showing 28:49, paused">
+<img src="docs/screenshots/shorts-page.png" width="650" alt="A Shorts page, video blurred, with an arrow pointing to the timer in the top-right corner showing 7:32">
 
 ## Puzzles
 
 Sudoku: a new puzzle every time, always with exactly one solution. Pick a number on the pad below the grid and tap squares to place it, or select a square and type. The picked number is highlighted across the board, notes included. **Notes** (or the N key) switches to small pencil marks, and **Fill all notes** puts 1–9 in every empty square for you to whittle down; placing a number removes it from the notes in its row, column and box, unless it clashes with a number already there. Clashing numbers turn red as you type, and **Check** marks wrong entries in red without removing them.
 
-<img src="docs/screenshots/sudoku.png" width="380" alt="Sudoku with every 5 highlighted and two wrong entries marked red">
+<img src="docs/screenshots/sudoku.png" width="380" alt="Sudoku with 5 picked on the number pad and highlighted on the board and in the pencil marks, Notes mode on">
 
 Math sprint: addition, subtraction and multiplication. You need 10 correct answers, and a wrong one takes a point away.
 
-<img src="docs/screenshots/math.png" width="420" alt="Math sprint, four of ten answered">
+<img src="docs/screenshots/math.png" width="420" alt="Math sprint, five of ten answered">
 
 Memory: sixteen cards, eight pairs.
 
