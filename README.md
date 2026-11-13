@@ -14,13 +14,13 @@ Available on [addons.mozilla.org](https://addons.mozilla.org/firefox/addon/short
 - Paused videos, background tabs and minimised windows don't count.
 - Neither does replaying a Short, rewinding, or scrolling back to one of the last three you watched.
 - While Shorts are locked, any `youtube.com/shorts` page takes you to the puzzles. The rest of YouTube works as usual.
-- Solved puzzles and sudoku progress are saved, so closing the tab doesn't lose them.
+- Solved puzzles and sudoku and memory progress are saved, so closing the tab doesn't lose them.
 
 <img src="docs/screenshots/shorts-page.png" width="650" alt="A Shorts page, video blurred, with an arrow pointing to the timer in the top-right corner showing 7:32">
 
 ## Puzzles
 
-Sudoku: a new puzzle every time, always with exactly one solution. Pick a number on the pad below the grid and tap squares to place it, or select a square and type. The picked number is highlighted across the board, notes included. **Notes** (or the N key) switches to small pencil marks, and **Fill all notes** puts 1–9 in every empty square for you to whittle down; placing a number removes it from the notes in its row, column and box, unless it clashes with a number already there. Clashing numbers turn red as you type, and **Check** marks wrong entries in red without removing them.
+Sudoku: a new puzzle every time, always with exactly one solution. Pick a number on the pad below the grid and tap squares to place it, or select a square and type, or move with the arrow keys and press Enter to place the picked number. The picked number is highlighted across the board, notes included. **Undo** (or Ctrl+Z) takes back one change at a time. **Notes** (or the N key) switches to small pencil marks, and **Note 1–9 everywhere** pencils every number into every empty square for you to whittle down; placing a number removes it from the notes in its row, column and box, unless it clashes with a number already there. Clashing numbers turn red as you type, and **Check** marks wrong entries in red without removing them.
 
 <img src="docs/screenshots/sudoku.png" width="380" alt="Sudoku with 5 picked on the number pad and highlighted on the board and in the pencil marks, Notes mode on">
 

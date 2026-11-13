@@ -415,17 +415,19 @@ test("memory pairs", async (t) => {
   async function memoryPage(opts) {
     const p = await gamesPage({ state: locked({ solved: { sudoku: true, math: true } }), ...opts });
     const cards = () => [...p.$("memory-grid").children];
+    const deck = () => JSON.parse(JSON.stringify(p.evaluate("memory.deck")));
     const bySymbol = () => {
       const map = new Map();
-      cards().forEach((c) => map.set(c.dataset.symbol, [...(map.get(c.dataset.symbol) || []), c]));
+      cards().forEach((c, i) => map.set(deck()[i], [...(map.get(deck()[i]) || []), c]));
       return map;
     };
     const mismatch = () => {
       const [[, [a]], [, [b]]] = [...bySymbol()];
       return [a, b];
     };
-    return { ...p, cards, bySymbol, mismatch };
+    return { ...p, cards, deck, bySymbol, mismatch };
   }
+  const solvedDeal = (p) => ({ deck: p.deck(), found: p.deck().map((_, i) => i) });
 
   await t.test("deals eight pairs face down", async () => {
     const p = await memoryPage();
@@ -437,7 +439,7 @@ test("memory pairs", async (t) => {
   await t.test("shuffles the deal", async () => {
     const a = await memoryPage({ random: seededRandom(1) });
     const b = await memoryPage({ random: seededRandom(2) });
-    assert.notDeepEqual(a.cards().map((c) => c.dataset.symbol), b.cards().map((c) => c.dataset.symbol));
+    assert.notDeepEqual(a.deck(), b.deck());
   });
   await t.test("labels cards without giving them away", async () => {
     const p = await memoryPage();
@@ -448,7 +450,59 @@ test("memory pairs", async (t) => {
     const [card] = p.cards();
     card.click();
     assert.equal(card.classList.contains("hidden-face"), false);
-    assert.equal(card.getAttribute("aria-label"), card.dataset.symbol);
+    assert.equal(card.getAttribute("aria-label"), p.deck()[0]);
+    assert.equal(card.textContent, p.deck()[0]);
+  });
+  await t.test("face-down cards hold no symbol to select or read", async () => {
+    const p = await memoryPage();
+    assert.equal(p.$("memory-grid").textContent, "");
+    assert.ok(p.cards().every((c) => Object.keys(c.dataset).every((k) => k === "i")));
+    const [a, b] = p.mismatch();
+    a.click();
+    b.click();
+    await p.clock.advance(800);
+    assert.equal(p.$("memory-grid").textContent, "");
+  });
+  await t.test("saves the deal and the pairs found", async () => {
+    const p = await memoryPage();
+    await flush();
+    assert.deepEqual(p.bg.data.puzzles.memory.deck, p.deck());
+    assert.deepEqual(p.bg.data.puzzles.memory.found, []);
+    const [[, [a, b]]] = [...p.bySymbol()];
+    a.click();
+    b.click();
+    await flush();
+    assert.deepEqual(p.bg.data.puzzles.memory.found, [a, b].map((c) => p.cards().indexOf(c)));
+  });
+  await t.test("coming back shows the same deal with its pairs still open", async () => {
+    const first = await memoryPage();
+    const deck = first.deck();
+    const pair = [deck.indexOf(deck[0]), deck.lastIndexOf(deck[0])];
+    const p = await memoryPage({ random: seededRandom(99), puzzles: { memory: { deck, found: pair } } });
+    assert.deepEqual(p.deck(), deck);
+    p.cards().forEach((c, i) => {
+      const open = pair.includes(i);
+      assert.equal(c.classList.contains("matched"), open);
+      assert.equal(c.classList.contains("hidden-face"), !open);
+      assert.equal(c.textContent, open ? deck[i] : "");
+    });
+  });
+  await t.test("coming back after solving it shows the finished board, not a new game", async () => {
+    const first = await memoryPage();
+    const p = await gamesPage({ state: locked({ solved: { memory: true } }), random: seededRandom(99), puzzles: { memory: solvedDeal(first) } });
+    p.document.querySelector('#steps button[data-game="memory"]').click();
+    await flush();
+    const cards = [...p.$("memory-grid").children];
+    assert.deepEqual(JSON.parse(JSON.stringify(p.evaluate("memory.deck"))), first.deck());
+    assert.ok(cards.every((c) => c.classList.contains("matched") && !c.classList.contains("hidden-face")));
+    assert.equal(p.$("memory-msg").textContent, "All pairs found!");
+  });
+  await t.test("a solved memory with no saved deal still shows as finished", async () => {
+    const p = await gamesPage({ state: locked({ solved: { memory: true } }) });
+    p.document.querySelector('#steps button[data-game="memory"]').click();
+    await flush();
+    assert.ok([...p.$("memory-grid").children].every((c) => c.classList.contains("matched")));
+    assert.equal(p.$("memory-msg").textContent, "All pairs found!");
   });
   await t.test("a matching pair stays open", async () => {
     const p = await memoryPage();
@@ -530,8 +584,10 @@ test("all three puzzles in a row unlock Shorts", async () => {
     await flush();
   }
   await p.clock.advance(700);
+  await flush();
+  const deck = JSON.parse(JSON.stringify(p.evaluate("memory.deck")));
   const pairs = new Map();
-  [...p.$("memory-grid").children].forEach((c) => pairs.set(c.dataset.symbol, [...(pairs.get(c.dataset.symbol) || []), c]));
+  [...p.$("memory-grid").children].forEach((c, i) => pairs.set(deck[i], [...(pairs.get(deck[i]) || []), c]));
   for (const [, [a, b]] of pairs) {
     a.click();
     b.click();
@@ -541,6 +597,93 @@ test("all three puzzles in a row unlock Shorts", async () => {
   assert.equal(s.locked, false);
   assert.equal(s.remaining, 60);
   assert.equal(p.$("done-time").textContent, "1:00");
+});
+
+test("sudoku undo", async (t) => {
+  const undoButton = (p) => p.$("sudoku-undo");
+  const ctrlZ = (p, el) => {
+    const e = new p.window.KeyboardEvent("keydown", { key: "z", ctrlKey: true, bubbles: true, cancelable: true });
+    el.dispatchEvent(e);
+    return e;
+  };
+  const notesOf = (p, i) => [...boxes(p)[i].querySelector(".notes").children].map((s) => s.textContent).join("");
+  const [a, b] = EMPTY_CELLS;
+
+  await t.test("starts with nothing to undo", async () => {
+    const p = await gamesPage();
+    assert.equal(undoButton(p).disabled, true);
+  });
+  await t.test("takes back a typed number and saves that", async () => {
+    const p = await gamesPage();
+    key(p, cells(p)[a], "4");
+    assert.equal(undoButton(p).disabled, false);
+    undoButton(p).click();
+    await flush();
+    assert.equal(cells(p)[a].value, "");
+    assert.equal(p.bg.data.puzzles.sudoku.entries[a], 0);
+    assert.equal(undoButton(p).disabled, true);
+  });
+  await t.test("Ctrl+Z undoes too", async () => {
+    const p = await gamesPage();
+    key(p, cells(p)[a], "4");
+    const e = ctrlZ(p, cells(p)[a]);
+    assert.equal(cells(p)[a].value, "");
+    assert.equal(e.defaultPrevented, true);
+  });
+  await t.test("goes back one step at a time", async () => {
+    const p = await gamesPage();
+    key(p, cells(p)[a], "4");
+    key(p, cells(p)[b], "1");
+    key(p, cells(p)[a], "6");
+    undoButton(p).click();
+    assert.deepEqual([cells(p)[a].value, cells(p)[b].value], ["4", "1"]);
+    undoButton(p).click();
+    assert.deepEqual([cells(p)[a].value, cells(p)[b].value], ["4", ""]);
+    undoButton(p).click();
+    assert.deepEqual([cells(p)[a].value, cells(p)[b].value], ["", ""]);
+  });
+  await t.test("brings back the notes a placed number cleared", async () => {
+    const p = await gamesPage();
+    p.$("sudoku-fill-notes").click();
+    key(p, cells(p)[a], "4");
+    assert.equal(notesOf(p, b).includes("4"), false);
+    undoButton(p).click();
+    assert.equal(cells(p)[a].value, "");
+    assert.equal(notesOf(p, a), "123456789");
+    assert.equal(notesOf(p, b), "123456789");
+  });
+  await t.test("takes back filling all notes in one step", async () => {
+    const p = await gamesPage();
+    p.$("sudoku-fill-notes").click();
+    undoButton(p).click();
+    assert.ok(EMPTY_CELLS.every((i) => notesOf(p, i) === ""));
+    assert.equal(undoButton(p).disabled, true);
+  });
+  await t.test("covers erasing and tapping with a picked number", async () => {
+    const p = await gamesPage();
+    p.document.querySelector('#sudoku-pad button[data-digit="4"]').click();
+    cells(p)[a].click();
+    key(p, cells(p)[a], "Backspace");
+    undoButton(p).click();
+    assert.equal(cells(p)[a].value, "4");
+    undoButton(p).click();
+    assert.equal(cells(p)[a].value, "");
+  });
+  await t.test("doesn't record what changed nothing", async () => {
+    const p = await gamesPage();
+    key(p, cells(p)[0], "4");
+    key(p, cells(p)[a], "Backspace");
+    assert.equal(undoButton(p).disabled, true);
+  });
+  await t.test("clears a wrong mark it brings back", async () => {
+    const p = await gamesPage();
+    key(p, cells(p)[a], "1");
+    p.$("sudoku-check").click();
+    key(p, cells(p)[a], "4");
+    undoButton(p).click();
+    assert.equal(cells(p)[a].value, "1");
+    assert.equal(cells(p)[a].classList.contains("wrong"), false);
+  });
 });
 
 test("sudoku number pad and notes", async (t) => {
@@ -617,6 +760,37 @@ test("sudoku number pad and notes", async (t) => {
     padButton(p, 1).click();
     cells(p)[a].click();
     assert.equal(cells(p)[a].value, "1");
+  });
+  await t.test("Enter places the picked number in the selected square", async () => {
+    const p = await gamesPage();
+    padButton(p, 4).click();
+    const e = key(p, cells(p)[a], "Enter");
+    await flush();
+    assert.equal(cells(p)[a].value, "4");
+    assert.equal(p.bg.data.puzzles.sudoku.entries[a], 4);
+    assert.equal(e.defaultPrevented, true);
+  });
+  await t.test("Enter with the eraser picked clears the square", async () => {
+    const p = await gamesPage();
+    key(p, cells(p)[a], "4");
+    eraser(p).click();
+    key(p, cells(p)[a], "Enter");
+    assert.equal(cells(p)[a].value, "");
+  });
+  await t.test("Enter with nothing picked places nothing", async () => {
+    const p = await gamesPage();
+    key(p, cells(p)[a], "Enter");
+    assert.equal(cells(p)[a].value, "");
+  });
+  await t.test("the pad and the buttons below the board don't take focus from the square", async () => {
+    const p = await gamesPage();
+    const buttons = [...p.document.querySelectorAll("#sudoku-pad button, #sudoku-actions button")];
+    assert.ok(buttons.some((x) => x.id === "sudoku-notes"));
+    for (const button of buttons) {
+      const e = new p.window.MouseEvent("mousedown", { bubbles: true, cancelable: true });
+      button.dispatchEvent(e);
+      assert.equal(e.defaultPrevented, true, button.textContent);
+    }
   });
   await t.test("tapping a given changes nothing", async () => {
     const p = await gamesPage();

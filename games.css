@@ -63,6 +63,8 @@ header {
   font-size: clamp(16px, 5vw, 24px);
   color: var(--entry);
   caret-color: transparent;
+  cursor: pointer;
+  user-select: none;
 }
 
 .sudoku input:focus {
@@ -73,6 +75,7 @@ header {
 .sudoku input.given {
   color: var(--given);
   font-weight: 700;
+  cursor: default;
 }
 
 .sudoku input.same {
