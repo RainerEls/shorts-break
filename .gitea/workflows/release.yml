@@ -3,6 +3,12 @@ name: Release
 on:
   push:
     branches: [main]
+    # Nothing here goes into the add-on zip, so changes to it alone make no release.
+    paths-ignore:
+      - ".gitea/**"
+      - "test/**"
+      - package.json
+      - package-lock.json
   pull_request:
 
 jobs:
