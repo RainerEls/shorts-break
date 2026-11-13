@@ -38,6 +38,11 @@
   box-sizing: border-box;
 }
 
+/* A display rule elsewhere must not bring back an element hidden with the attribute. */
+[hidden] {
+  display: none !important;
+}
+
 body {
   margin: 0;
   background: var(--bg);

@@ -78,6 +78,7 @@ test("page state", async (t) => {
     assert.equal(p.$("headline").textContent, "Shorts are unlocked");
     assert.equal(p.$("done-time").textContent, "0:45");
     assert.equal(p.$("steps").hidden, true);
+    assert.equal(p.$("subline").hidden, true);
   });
 });
 

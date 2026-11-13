@@ -34,7 +34,7 @@ function render() {
   if (!status.locked) {
     steps.hidden = true;
     $("headline").textContent = "Shorts are unlocked";
-    $("subline").textContent = "";
+    $("subline").hidden = true;
     $("done-time").textContent = formatTime(status.remaining);
     show("done");
     return;
