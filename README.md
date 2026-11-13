@@ -52,6 +52,10 @@ To try it out, open `about:debugging#/runtime/this-firefox`, click **Load Tempor
 
 For a permanent install, download `shorts-break-<version>.zip` from the latest release. Regular Firefox only installs add-ons signed by Mozilla, so that zip has to go through addons.mozilla.org first.
 
+## Tests
+
+`npm ci && npm test` runs the unit tests with Node's test runner. Each script runs in jsdom with a fake `browser` API and a fake clock, so the timer, the lock, the puzzles and the pages are tested without Firefox. A pull request can't be merged until they and `web-ext lint` pass.
+
 ## License
 
 GPL-3.0. See [LICENSE](LICENSE).
