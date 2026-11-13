@@ -1,4 +1,6 @@
 (() => {
+  // Firefox injects the new version into open tabs on update or reload, but the old pill stays behind, frozen.
+  document.querySelectorAll("#shorts-break-pill").forEach((el) => el.remove());
   let pill = null;
 
   const onShorts = () => location.pathname.startsWith("/shorts");
